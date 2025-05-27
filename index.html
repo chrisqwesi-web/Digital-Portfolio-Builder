@@ -51,19 +51,36 @@
         .canvas-component {
             border: 1px solid #9CA3AF; /* border-gray-400 */
             position: relative; /* For potential absolute positioned controls later */
+            cursor: grab; /* Make canvas components draggable */
         }
-        .drop-zone-active {
+        .drop-zone-active { /* For dropping new components from sidebar */
             border: 2px dashed #3B82F6; /* border-blue-500 */
             background-color: #EFF6FF; /* bg-blue-50 */
         }
         /* Placeholder styling for components on canvas */
-        .component-header { background-color: #BFDBFE; border-left: 4px solid #3B82F6; } /* bg-blue-200, border-blue-500 */
-        .component-about { background-color: #A7F3D0; border-left: 4px solid #10B981; } /* bg-green-200, border-green-500 */
-        .component-skills { background-color: #FDE68A; border-left: 4px solid #F59E0B; } /* bg-yellow-200, border-yellow-500 */
-        .component-projects { background-color: #FECACA; border-left: 4px solid #EF4444; } /* bg-red-200, border-red-500 */
-        .component-experience { background-color: #DDD6FE; border-left: 4px solid #8B5CF6; } /* bg-purple-200, border-purple-500 */
-        .component-contact { background-color: #E0E7FF; border-left: 4px solid #6366F1; } /* bg-indigo-200, border-indigo-500 */
-        .component-footer { background-color: #D1D5DB; border-left: 4px solid #6B7280; } /* bg-gray-300, border-gray-500 */
+        .component-header { background-color: #BFDBFE; border-left: 4px solid #3B82F6; }
+        .component-about { background-color: #A7F3D0; border-left: 4px solid #10B981; }
+        .component-skills { background-color: #FDE68A; border-left: 4px solid #F59E0B; }
+        .component-projects { background-color: #FECACA; border-left: 4px solid #EF4444; }
+        .component-experience { background-color: #DDD6FE; border-left: 4px solid #8B5CF6; }
+        .component-contact { background-color: #E0E7FF; border-left: 4px solid #6366F1; }
+        .component-footer { background-color: #D1D5DB; border-left: 4px solid #6B7280; }
+
+        /* Dragging style for components on canvas */
+        .dragging {
+            opacity: 0.5;
+            border: 2px dashed #60A5FA; /* A lighter blue */
+        }
+        /* Drop indicator for reordering components on canvas */
+        .drop-indicator-top {
+            border-top: 3px solid #2563EB; /* A strong blue */
+            margin-top: -3px; /* Adjust to sit on top of the border */
+        }
+        .drop-indicator-bottom {
+            border-bottom: 3px solid #2563EB;
+            margin-bottom: -3px;
+        }
+
 
         /* Simple modal for messages */
         .modal-overlay {
@@ -158,21 +175,20 @@
         class Component {
             constructor(type, data = {}) {
                 this.id = generateUniqueId();
-                this.type = type; // e.g., 'header', 'about'
-                this.data = data; // Content specific to the component type
+                this.type = type;
+                this.data = data; 
             }
 
-            // Generates HTML representation of the component for the canvas
             render() {
                 const componentWrapper = document.createElement('div');
                 componentWrapper.id = this.id;
-                componentWrapper.classList.add('canvas-component', `component-${this.type}`, 'p-4', 'rounded-lg', 'shadow-md', 'mb-4', 'cursor-pointer', 'relative');
-                componentWrapper.setAttribute('data-component-id', this.id); // For easier selection
+                componentWrapper.draggable = true; 
+                componentWrapper.classList.add('canvas-component', `component-${this.type}`, 'p-4', 'rounded-lg', 'shadow-md', 'mb-4', 'relative');
+                componentWrapper.style.cursor = 'grab'; 
+                componentWrapper.setAttribute('data-component-id', this.id);
 
-                // Basic content based on type
                 let contentHTML = `<h3 class="font-semibold text-lg capitalize">${this.type.replace('-', ' ')} Section</h3>`;
                 
-                // Add placeholder content or structure based on component type
                 switch(this.type) {
                     case 'header':
                         contentHTML += `<p class="text-sm text-gray-600">Name: ${this.data.name || 'Your Name'}</p>`;
@@ -184,20 +200,33 @@
                     case 'skills':
                         contentHTML += `<p class="text-sm text-gray-600">Skills: ${(this.data.skills || ['Skill 1', 'Skill 2']).join(', ')}</p>`;
                         break;
-                    // Add more cases for other component types
+                    case 'projects':
+                        contentHTML += `<p class="text-sm text-gray-600">Project Title: ${this.data.projectTitle || 'My Awesome Project'}</p>`;
+                        contentHTML += `<p class="text-sm text-gray-600">Description: ${this.data.projectDescription || 'Details about the project...'}</p>`;
+                        break;
+                    case 'experience':
+                        contentHTML += `<p class="text-sm text-gray-600">Job Title: ${this.data.jobTitle || 'Software Engineer'}</p>`;
+                        contentHTML += `<p class="text-sm text-gray-600">Company: ${this.data.companyName || 'Tech Solutions Inc.'}</p>`;
+                        break;
+                    case 'contact':
+                        contentHTML += `<p class="text-sm text-gray-600">Email: ${this.data.email || 'your.email@example.com'}</p>`;
+                        contentHTML += `<p class="text-sm text-gray-600">Phone: ${this.data.phone || '+1234567890'}</p>`;
+                        break;
+                    case 'footer':
+                        contentHTML += `<p class="text-sm text-gray-600">${this.data.footerText || '© 2024 Your Name. All rights reserved.'}</p>`;
+                        break;
                     default:
                         contentHTML += `<p class="text-sm text-gray-600">Content for ${this.type} goes here.</p>`;
                 }
                 
                 componentWrapper.innerHTML = contentHTML;
                 
-                // Add a delete button to each component
                 const deleteButton = document.createElement('button');
-                deleteButton.innerHTML = '&times;'; // A simple 'x'
+                deleteButton.innerHTML = '&times;';
                 deleteButton.classList.add('absolute', 'top-2', 'right-2', 'text-red-500', 'hover:text-red-700', 'font-bold', 'text-xl', 'p-1', 'leading-none');
                 deleteButton.title = 'Delete Component';
                 deleteButton.onclick = (event) => {
-                    event.stopPropagation(); // Prevent triggering component selection
+                    event.stopPropagation();
                     portfolioBuilder.removeComponent(this.id);
                 };
                 componentWrapper.appendChild(deleteButton);
@@ -209,17 +238,18 @@
         // --- PORTFOLIO BUILDER CLASS ---
         class PortfolioBuilder {
             constructor() {
-                this.components = []; // Array of Component instances
-                this.history = []; // For undo/redo [[...components], [...components]]
-                this.historyIndex = -1; // Current position in history
+                this.components = [];
+                this.history = [];
+                this.historyIndex = -1;
                 this.selectedComponentId = null;
+                this.draggedComponentId = null;
 
                 this.editorCanvas = document.getElementById('editorCanvas');
                 this.propertiesPanelContent = document.getElementById('propertiesContent');
                 this.initComponentsPanel();
                 this.initCanvasDropZone();
                 this.initToolbar();
-                this.loadPortfolio(); // Load saved data on init
+                this.loadPortfolio();
             }
 
             initComponentsPanel() {
@@ -227,6 +257,7 @@
                 draggableItems.forEach(item => {
                     item.addEventListener('dragstart', (event) => {
                         event.dataTransfer.setData('text/plain', event.target.dataset.componentType);
+                        event.dataTransfer.setData('source', 'components-panel');
                         event.target.style.opacity = '0.5';
                     });
                     item.addEventListener('dragend', (event) => {
@@ -237,19 +268,31 @@
 
             initCanvasDropZone() {
                 this.editorCanvas.addEventListener('dragover', (event) => {
-                    event.preventDefault(); // Necessary to allow dropping
-                    this.editorCanvas.classList.add('drop-zone-active');
+                    const source = event.dataTransfer.getData('source');
+                    if (event.dataTransfer.types.includes('text/plain')) {
+                        event.preventDefault(); 
+                        if (this.components.length === 0 || source === 'components-panel') {
+                            this.editorCanvas.classList.add('drop-zone-active');
+                        }
+                    }
                 });
-                this.editorCanvas.addEventListener('dragleave', () => {
-                    this.editorCanvas.classList.remove('drop-zone-active');
+                this.editorCanvas.addEventListener('dragleave', (event) => {
+                    if (!this.editorCanvas.contains(event.relatedTarget)) {
+                        this.editorCanvas.classList.remove('drop-zone-active');
+                    }
                 });
                 this.editorCanvas.addEventListener('drop', (event) => {
                     event.preventDefault();
                     this.editorCanvas.classList.remove('drop-zone-active');
                     const componentType = event.dataTransfer.getData('text/plain');
-                    if (componentType) {
-                        this.addComponent(componentType);
+                    const source = event.dataTransfer.getData('source');
+
+                    if (componentType && source === 'components-panel') {
+                        if (event.target === this.editorCanvas) {
+                             this.addComponent(componentType);
+                        }
                     }
+                    this.clearDropIndicators();
                 });
             }
             
@@ -268,14 +311,14 @@
                     this.updateHistory();
                 }
                 this.renderCanvas();
-                this.selectComponent(newComponent.id); // Select the new component
+                this.selectComponent(newComponent.id);
             }
 
             removeComponent(componentId, suppressHistory = false) {
                 this.components = this.components.filter(comp => comp.id !== componentId);
                  if (this.selectedComponentId === componentId) {
                     this.selectedComponentId = null;
-                    this.renderPropertiesPanel(); // Clear properties panel
+                    this.renderPropertiesPanel();
                 }
                 if (!suppressHistory) {
                     this.updateHistory();
@@ -284,28 +327,48 @@
             }
             
             clearCanvas(suppressHistory = false) {
-                if (this.components.length === 0) {
-                    showMessage("Canvas is already empty.");
+                if (this.components.length === 0 && !localStorage.getItem('portfolioBuilderData')) {
+                    showMessage("Canvas and saved data are already empty.");
                     return;
                 }
+                
+                // Optionally, add a confirmation step for a destructive action like this
+                // if (!confirm("Are you sure you want to clear the canvas and all saved data? This cannot be undone.")) {
+                //    return;
+                // }
+
                 this.components = [];
                 this.selectedComponentId = null;
+                
+                try {
+                    localStorage.removeItem('portfolioBuilderData');
+                } catch (error) {
+                    console.error("Error removing item from localStorage:", error);
+                    showMessage("Canvas cleared, but failed to clear saved data from storage.");
+                     if (!suppressHistory) {
+                        this.updateHistory(); // Update history even if local storage clear fails
+                    }
+                    this.renderCanvas();
+                    this.renderPropertiesPanel();
+                    return;
+                }
+
                 if (!suppressHistory) {
-                    this.updateHistory();
+                    this.updateHistory(); // Reflect the cleared state in history
                 }
                 this.renderCanvas();
                 this.renderPropertiesPanel();
-                showMessage("Canvas cleared.");
+                showMessage("Canvas and saved data cleared successfully.");
             }
 
             renderCanvas() {
-                this.editorCanvas.innerHTML = ''; // Clear previous content
+                this.editorCanvas.innerHTML = ''; 
                 if (this.components.length === 0) {
                     this.editorCanvas.innerHTML = '<p class="text-gray-400 text-center italic">Drag components here to build your portfolio.</p>';
                 } else {
                     this.components.forEach(component => {
                         const componentElement = component.render();
-                        // Add click listener to select component and show properties
+                        this.addReorderListeners(componentElement);
                         componentElement.addEventListener('click', () => {
                             this.selectComponent(component.id);
                         });
@@ -313,6 +376,87 @@
                     });
                 }
                 this.updateSelectedComponentHighlight();
+            }
+
+            addReorderListeners(element) {
+                element.addEventListener('dragstart', (event) => {
+                    event.stopPropagation();
+                    this.draggedComponentId = element.id;
+                    event.dataTransfer.setData('text/plain', element.id);
+                    event.dataTransfer.setData('source', 'canvas-component');
+                    event.dataTransfer.effectAllowed = 'move';
+                    element.classList.add('dragging');
+                });
+
+                element.addEventListener('dragend', (event) => {
+                    event.stopPropagation();
+                    element.classList.remove('dragging');
+                    this.draggedComponentId = null;
+                    this.clearDropIndicators();
+                });
+
+                element.addEventListener('dragover', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    event.dataTransfer.dropEffect = 'move';
+                    this.clearDropIndicators();
+                    const targetElement = event.currentTarget;
+                    const boundingBox = targetElement.getBoundingClientRect();
+                    const mouseY = event.clientY;
+                    const midY = boundingBox.top + boundingBox.height / 2;
+                    if (mouseY < midY) {
+                        targetElement.classList.add('drop-indicator-top');
+                    } else {
+                        targetElement.classList.add('drop-indicator-bottom');
+                    }
+                });
+
+                element.addEventListener('dragleave', (event) => {
+                    event.stopPropagation();
+                     if (!element.contains(event.relatedTarget)) {
+                        element.classList.remove('drop-indicator-top', 'drop-indicator-bottom');
+                    }
+                });
+
+                element.addEventListener('drop', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    this.clearDropIndicators();
+                    element.classList.remove('drop-indicator-top', 'drop-indicator-bottom');
+                    const droppedOnComponentId = element.id;
+                    if (this.draggedComponentId && this.draggedComponentId !== droppedOnComponentId) {
+                        const boundingBox = element.getBoundingClientRect();
+                        const mouseY = event.clientY;
+                        const midY = boundingBox.top + boundingBox.height / 2;
+                        const position = mouseY < midY ? 'before' : 'after';
+                        this.reorderComponent(this.draggedComponentId, droppedOnComponentId, position);
+                    }
+                    this.draggedComponentId = null;
+                });
+            }
+            
+            clearDropIndicators() {
+                document.querySelectorAll('.canvas-component').forEach(el => {
+                    el.classList.remove('drop-indicator-top', 'drop-indicator-bottom');
+                });
+            }
+
+            reorderComponent(draggedId, targetId, position) {
+                const draggedIndex = this.components.findIndex(c => c.id === draggedId);
+                let targetIndex = this.components.findIndex(c => c.id === targetId);
+                if (draggedIndex === -1 || targetIndex === -1) return;
+                const [draggedComponent] = this.components.splice(draggedIndex, 1);
+                if (draggedIndex < targetIndex) {
+                    targetIndex--; 
+                }
+                if (position === 'before') {
+                    this.components.splice(targetIndex, 0, draggedComponent);
+                } else {
+                    this.components.splice(targetIndex + 1, 0, draggedComponent);
+                }
+                this.updateHistory();
+                this.renderCanvas();
+                this.selectComponent(draggedId);
             }
 
             selectComponent(componentId) {
@@ -325,14 +469,16 @@
                 document.querySelectorAll('.canvas-component').forEach(el => {
                     if (el.id === this.selectedComponentId) {
                         el.classList.add('ring-2', 'ring-blue-500', 'ring-offset-2');
+                        el.style.cursor = 'default';
                     } else {
                         el.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2');
+                        el.style.cursor = 'grab';
                     }
                 });
             }
             
             renderPropertiesPanel() {
-                this.propertiesPanelContent.innerHTML = ''; // Clear previous
+                this.propertiesPanelContent.innerHTML = '';
                 if (!this.selectedComponentId) {
                     this.propertiesPanelContent.innerHTML = '<p class="text-gray-500 italic">Select a component on the canvas to edit its properties.</p>';
                     return;
@@ -352,10 +498,6 @@
                 title.textContent = `${component.type.replace('-', ' ')} Properties`;
                 form.appendChild(title);
 
-                // Common fields (example: ID - usually not editable by user but good for debug)
-                // this.createPropertyInput(form, 'ID (read-only)', 'id', component.id, 'text', true);
-
-                // Type-specific fields
                 switch(component.type) {
                     case 'header':
                         this.createPropertyInput(form, 'Your Name', 'name', component.data.name || '', 'text', (value) => component.data.name = value);
@@ -365,12 +507,35 @@
                         this.createPropertyTextarea(form, 'Biography', 'bio', component.data.bio || '', (value) => component.data.bio = value);
                         break;
                     case 'skills':
-                        // For simplicity, a comma-separated string for skills
                         this.createPropertyInput(form, 'Skills (comma-separated)', 'skills', (component.data.skills || []).join(', '), 'text', (value) => {
                             component.data.skills = value.split(',').map(s => s.trim()).filter(s => s);
                         });
                         break;
-                    // Add more cases for project, experience, contact, footer
+                    case 'projects':
+                        this.createPropertyInput(form, 'Project Title', 'projectTitle', component.data.projectTitle || '', 'text', (value) => component.data.projectTitle = value);
+                        this.createPropertyTextarea(form, 'Project Description', 'projectDescription', component.data.projectDescription || '', (value) => component.data.projectDescription = value);
+                        this.createPropertyInput(form, 'Technologies (comma-separated)', 'projectTech', (component.data.projectTech || []).join(', '), 'text', (value) => {
+                            component.data.projectTech = value.split(',').map(s => s.trim()).filter(s => s);
+                        });
+                        this.createPropertyInput(form, 'Live Demo URL', 'projectDemoUrl', component.data.projectDemoUrl || '', 'url', (value) => component.data.projectDemoUrl = value);
+                        this.createPropertyInput(form, 'GitHub URL', 'projectGithubUrl', component.data.projectGithubUrl || '', 'url', (value) => component.data.projectGithubUrl = value);
+                        this.createPropertyInput(form, 'Image URL', 'projectImageUrl', component.data.projectImageUrl || '', 'text', (value) => component.data.projectImageUrl = value);
+                        break;
+                    case 'experience':
+                        this.createPropertyInput(form, 'Job Title', 'jobTitle', component.data.jobTitle || '', 'text', (value) => component.data.jobTitle = value);
+                        this.createPropertyInput(form, 'Company Name', 'companyName', component.data.companyName || '', 'text', (value) => component.data.companyName = value);
+                        this.createPropertyInput(form, 'Dates (e.g., Jan 2020 - Present)', 'dates', component.data.dates || '', 'text', (value) => component.data.dates = value);
+                        this.createPropertyTextarea(form, 'Responsibilities', 'responsibilities', component.data.responsibilities || '', (value) => component.data.responsibilities = value);
+                        break;
+                    case 'contact':
+                        this.createPropertyInput(form, 'Email Address', 'email', component.data.email || '', 'email', (value) => component.data.email = value);
+                        this.createPropertyInput(form, 'Phone Number', 'phone', component.data.phone || '', 'tel', (value) => component.data.phone = value);
+                        this.createPropertyInput(form, 'LinkedIn URL', 'linkedinUrl', component.data.linkedinUrl || '', 'url', (value) => component.data.linkedinUrl = value);
+                        this.createPropertyInput(form, 'GitHub URL (Profile)', 'githubUrl', component.data.githubUrl || '', 'url', (value) => component.data.githubUrl = value);
+                        break;
+                    case 'footer':
+                        this.createPropertyTextarea(form, 'Footer Text', 'footerText', component.data.footerText || '', (value) => component.data.footerText = value);
+                        break;
                     default:
                         const p = document.createElement('p');
                         p.textContent = 'No editable properties for this component type yet.';
@@ -400,8 +565,8 @@
                 if (!readOnly && onUpdateCallback) {
                     input.addEventListener('input', (e) => {
                         onUpdateCallback(e.target.value);
-                        this.updateHistory(); // Save state after property change
-                        this.renderCanvas(); // Re-render to reflect changes
+                        this.updateHistory();
+                        this.renderCanvas();
                     });
                 }
                 
@@ -424,8 +589,8 @@
                 
                 textarea.addEventListener('input', (e) => {
                     onUpdateCallback(e.target.value);
-                    this.updateHistory(); // Save state after property change
-                    this.renderCanvas(); // Re-render to reflect changes
+                    this.updateHistory();
+                    this.renderCanvas();
                 });
                 
                 fieldset.appendChild(label);
@@ -433,17 +598,12 @@
                 form.appendChild(fieldset);
             }
 
-
-            // --- HISTORY (UNDO/REDO) ---
             updateHistory() {
-                // Clear any "future" states if we've undone and then made a new change
                 this.history = this.history.slice(0, this.historyIndex + 1);
-                
-                // Deep clone components for history (important!)
                 const currentComponentsState = this.components.map(comp => ({
-                    id: comp.id, // Keep original ID for selection consistency
+                    id: comp.id,
                     type: comp.type,
-                    data: JSON.parse(JSON.stringify(comp.data)) // Deep clone data
+                    data: JSON.parse(JSON.stringify(comp.data))
                 }));
                 this.history.push(currentComponentsState);
                 this.historyIndex = this.history.length - 1;
@@ -474,16 +634,14 @@
             
             loadStateFromHistory() {
                 const stateToLoad = this.history[this.historyIndex];
-                // When loading from history, we need to re-instantiate Component objects
                 this.components = stateToLoad.map(compData => {
                     const newComp = new Component(compData.type, compData.data);
-                    newComp.id = compData.id; // Restore original ID
+                    newComp.id = compData.id;
                     return newComp;
                 });
                 this.renderCanvas();
-                // If a component was selected, try to re-select it if it still exists
                 if (this.selectedComponentId && !this.components.find(c => c.id === this.selectedComponentId)) {
-                    this.selectedComponentId = null; // Deselect if it's gone
+                    this.selectedComponentId = null;
                 }
                 this.renderPropertiesPanel();
                 this.updateSelectedComponentHighlight();
@@ -494,10 +652,8 @@
                 document.getElementById('redoBtn').disabled = this.historyIndex >= this.history.length - 1;
             }
 
-            // --- LOCALSTORAGE PERSISTENCE ---
             savePortfolio() {
                 try {
-                    // Store only essential data, not full Component instances
                     const serializableComponents = this.components.map(comp => ({
                         id: comp.id,
                         type: comp.type,
@@ -516,26 +672,24 @@
                     const savedData = localStorage.getItem('portfolioBuilderData');
                     if (savedData) {
                         const parsedComponents = JSON.parse(savedData);
-                        this.components = []; // Clear current components before loading
+                        this.components = []; 
                         parsedComponents.forEach(compData => {
-                            // Re-create Component instances. Pass true to suppress history update during load.
                             const loadedComponent = new Component(compData.type, compData.data);
-                            loadedComponent.id = compData.id; // Restore original ID
+                            loadedComponent.id = compData.id;
                             this.components.push(loadedComponent);
                         });
-                        this.updateHistory(); // Set initial history state after loading
+                        this.updateHistory(); 
                         this.renderCanvas();
-                        this.selectedComponentId = null; // Clear selection after load
+                        this.selectedComponentId = null; 
                         this.renderPropertiesPanel();
                         showMessage('Portfolio loaded successfully!');
                     } else {
-                         // Set an initial state for history if nothing is loaded
                         this.updateHistory();
                         showMessage('No saved portfolio found. Start building!');
                     }
                 } catch (error) {
                     console.error("Error loading from localStorage:", error);
-                    localStorage.removeItem('portfolioBuilderData'); // Clear corrupted data
+                    localStorage.removeItem('portfolioBuilderData');
                     this.components = [];
                     this.updateHistory();
                     this.renderCanvas();
@@ -544,10 +698,7 @@
             }
         }
 
-        // --- INITIALIZE THE APP ---
         const portfolioBuilder = new PortfolioBuilder();
-        
-
     </script>
 </body>
 </html>
